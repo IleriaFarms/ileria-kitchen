@@ -89,13 +89,51 @@ function createSeed() {
     ])
   ];
 
+  const importedRecipes = (window.ILERIA_IMPORTED_RECIPES || []).map((recipe) => ({
+    ...recipe,
+    id: crypto.randomUUID(),
+    rows: recipe.rows.map((row) => ({ ...row }))
+  }));
+
+  importedRecipes.forEach((recipe) => {
+    recipe.rows.forEach((row) => {
+      if (!ingredients.some((item) => item.name === row.ingredient)) {
+        ingredients.push({
+          id: crypto.randomUUID(),
+          name: row.ingredient,
+          costPerUnit: Number(row.unitCost) || 0,
+          unit: row.unit || "unit",
+          supplier: "Imported from Ileria Farms cost spreadsheet",
+          updated: "2026-09-30"
+        });
+      }
+    });
+  });
+
+  recipes.push(...importedRecipes);
   return { settings: { laborRate: 25, targetMargin: .33 }, ingredients, recipes };
+}
+
+function mergeSeedData(stored) {
+  const seeded = createSeed();
+  const merged = stored || seeded;
+  merged.settings = { ...seeded.settings, ...(merged.settings || {}) };
+  merged.ingredients = merged.ingredients || [];
+  merged.recipes = merged.recipes || [];
+
+  seeded.ingredients.forEach((item) => {
+    if (!merged.ingredients.some((existing) => existing.name === item.name)) merged.ingredients.push(item);
+  });
+  seeded.recipes.forEach((recipe) => {
+    if (!merged.recipes.some((existing) => existing.name === recipe.name)) merged.recipes.push(recipe);
+  });
+  return merged;
 }
 
 function loadDatabase() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : createSeed();
+    return mergeSeedData(stored ? JSON.parse(stored) : null);
   } catch (error) {
     console.warn("Ileria Kitchen storage reset after invalid local data.", error);
     return createSeed();
@@ -108,6 +146,7 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
 function ingredient(name) { return db.ingredients.find((item) => item.name === name); }
 
 function rowCost(row) {
+  if (row.costMode === "imported" && row.importedCost != null) return Number(row.importedCost) || 0;
   const item = ingredient(row.ingredient);
   if (!item) return Number(row.importedCost) || 0;
   const converted = convert(Number(row.qty), row.unit, item.unit);
@@ -213,11 +252,11 @@ function recipeModal(existing) {
 
   $("#modalBody").innerHTML = '<p class="eyebrow">RECIPE BUILDER</p><h2>'+(existing?"Edit":"New")+' Recipe</h2><div class="form-grid">'+
     '<div><label>Name</label><input id="rName" value="'+recipe.name+'"></div><div><label>Category</label><input id="rCat" value="'+recipe.category+'"></div>'+
-    '<div><label>Batch yield</label><input id="rYield" type="number" min=".001" step=".001" value="'+recipe.yieldQty+'"></div>'+
+    '<div><label>Batch yield</label><input id="rYield" type="number" min=".001" step=".001" value="'+(recipe.yieldQty ?? "")+'"></div>'+
     '<div><label>Yield unit</label><select id="rYieldUnit">'+yieldUnits().map((unit)=>'<option '+(unit===recipe.yieldUnit?'selected':'')+'>'+unit+'</option>').join("")+'</select></div>'+
-    '<div><label>Prep minutes</label><input id="rPrep" type="number" min="0" value="'+recipe.prepMin+'"><label><input id="rPrepLabor" type="checkbox" style="width:auto" '+(recipe.prepLabor?'checked':'')+'> counts as labor</label></div>'+
-    '<div><label>Cook minutes</label><input id="rCook" type="number" min="0" value="'+recipe.cookMin+'"><label><input id="rCookLabor" type="checkbox" style="width:auto" '+(recipe.cookLabor?'checked':'')+'> counts as labor</label></div>'+
-    '<div><label>Packaging / batch ($)</label><input id="rPackaging" type="number" min="0" step=".01" value="'+(recipe.packaging||0)+'"></div>'+
+    '<div><label>Prep minutes</label><input id="rPrep" type="number" min="0" value="'+(recipe.prepMin ?? "")+'"><label><input id="rPrepLabor" type="checkbox" style="width:auto" '+(recipe.prepLabor?'checked':'')+'> counts as labor</label></div>'+
+    '<div><label>Cook minutes</label><input id="rCook" type="number" min="0" value="'+(recipe.cookMin ?? "")+'"><label><input id="rCookLabor" type="checkbox" style="width:auto" '+(recipe.cookLabor?'checked':'')+'> counts as labor</label></div>'+
+    '<div><label>Packaging / batch ($)</label><input id="rPackaging" type="number" min="0" step=".01" value="'+(recipe.packaging ?? "")+'"></div>'+
     '<div><label>Desired profit margin (%)</label><input id="rMargin" type="number" min="0" max="99" step="1" value="'+Math.round((recipe.targetMargin ?? db.settings.targetMargin)*100)+'"></div></div>'+
     '<h3>Ingredients</h3><div id="rows">'+recipe.rows.map(rowHTML).join("")+'</div><button class="secondary" id="addRow">+ Add ingredient</button>'+
     '<div class="summary" id="liveSummary"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">'+
@@ -226,11 +265,12 @@ function recipeModal(existing) {
   $("#modal").classList.remove("hidden");
 
   function collect() {
-    recipe.name=$("#rName").value; recipe.category=$("#rCat").value; recipe.yieldQty=Number($("#rYield").value);
-    recipe.yieldUnit=$("#rYieldUnit").value; recipe.prepMin=Number($("#rPrep").value); recipe.cookMin=Number($("#rCook").value);
-    recipe.prepLabor=$("#rPrepLabor").checked; recipe.cookLabor=$("#rCookLabor").checked; recipe.packaging=Number($("#rPackaging").value);
+    const numberOrNull = (selector) => $(selector).value === "" ? null : Number($(selector).value);
+    recipe.name=$("#rName").value; recipe.category=$("#rCat").value; recipe.yieldQty=numberOrNull("#rYield");
+    recipe.yieldUnit=$("#rYieldUnit").value; recipe.prepMin=numberOrNull("#rPrep"); recipe.cookMin=numberOrNull("#rCook");
+    recipe.prepLabor=$("#rPrepLabor").checked; recipe.cookLabor=$("#rCookLabor").checked; recipe.packaging=numberOrNull("#rPackaging");
     recipe.targetMargin=Number($("#rMargin").value)/100;
-    recipe.rows=$$("#rows .ingredient-row").map((el)=>({ingredient:el.querySelector(".ri").value,qty:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value}));
+    recipe.rows=$("#rows .ingredient-row").map((el)=>({ingredient:el.querySelector(".ri").value,qty:el.querySelector(".rq").value===""?null:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value}));
     return recipe;
   }
 
