@@ -207,13 +207,13 @@ function settingsView() {
   return '<div class="card" style="max-width:650px"><h2>Costing settings</h2><div class="form-grid"><div><label>Labor rate ($ / hour)</label><input id="laborRate" type="number" step=".01" value="'+db.settings.laborRate+'"></div><div><label>Default profit margin (%)</label><input id="targetMargin" type="number" min="0" max="99" value="'+db.settings.targetMargin*100+'"></div></div><p class="muted">New recipes begin with this margin. Existing recipes can override it individually.</p><button class="primary" id="saveSettings">Save settings</button></div>';
 }
 
-const views = { dashboard, ingredients: ingredientsView, recipes: recipesView, reports: reportsView, settings: settingsView };
-const titles = { dashboard:"Kitchen Dashboard", ingredients:"Ingredient Library", recipes:"Recipes", reports:"Cost Reports", settings:"Settings" };
+const views = { dashboard, ingredients: ingredientsView, recipes: recipesView, reports: reportsView, planning: window.planningView, settings: settingsView };
+const titles = { dashboard:"Kitchen Dashboard", ingredients:"Ingredient Library", recipes:"Recipes", reports:"Cost Reports", planning:"October Content Calendar", settings:"Settings" };
 
 function render(view = "dashboard") {
   $$("#nav button").forEach((button)=>button.classList.toggle("active", button.dataset.view === view));
   $("#pageTitle").textContent = titles[view];
-  $("#newRecipe").style.display = view === "settings" ? "none" : "";
+  $("#newRecipe").style.display = (view === "settings" || view === "planning") ? "none" : "";
   $("#app").innerHTML = views[view]();
   bind(view);
 }
@@ -299,6 +299,7 @@ function recipeModal(existing) {
 
 function bind(view) {
   $("#newRecipe").onclick=()=>recipeModal();
+  if(view==="planning") window.bindPlanning();
   if(view==="recipes") $$(".recipe-card").forEach((card)=>{card.onclick=()=>recipeModal(db.recipes.find((recipe)=>recipe.id===card.dataset.id));});
   if(view==="ingredients") {
     $("#addIngredient").onclick=ingredientModal;
