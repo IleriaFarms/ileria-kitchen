@@ -90,6 +90,7 @@ function createSeed() {
   ];
 
   const importedRecipes = (window.ILERIA_IMPORTED_RECIPES || []).map((recipe) => ({
+    ...(recipe.name === "Blueberry Mini Tart" ? {actualPrice:11} : {}),
     ...recipe,
     id: crypto.randomUUID(),
     rows: recipe.rows.map((row) => ({ ...row }))
@@ -165,7 +166,8 @@ function calc(recipe) {
   const sales = margin >= 1 ? 0 : total / (1 - margin);
   const profit = sales - total;
   const yieldQty = Number(recipe.yieldQty) || 1;
-  return { ingredients, labor, packaging, overhead, total, unit: total/yieldQty, sales, profit, salesUnit: sales/yieldQty, profitUnit: profit/yieldQty };
+  const actualPrice = recipe.actualPrice == null ? null : Number(recipe.actualPrice);
+  return { ingredients, labor, packaging, overhead, total, unit: total/yieldQty, sales, profit, salesUnit: sales/yieldQty, profitUnit: profit/yieldQty, actualPrice, actualProfitUnit: actualPrice == null ? null : actualPrice-total/yieldQty };
 }
 
 function dashboard() {
@@ -257,6 +259,7 @@ function recipeModal(existing) {
     '<div><label>Prep minutes</label><input id="rPrep" type="number" min="0" value="'+(recipe.prepMin ?? "")+'"><label><input id="rPrepLabor" type="checkbox" style="width:auto" '+(recipe.prepLabor?'checked':'')+'> counts as labor</label></div>'+
     '<div><label>Cook minutes</label><input id="rCook" type="number" min="0" value="'+(recipe.cookMin ?? "")+'"><label><input id="rCookLabor" type="checkbox" style="width:auto" '+(recipe.cookLabor?'checked':'')+'> counts as labor</label></div>'+
     '<div><label>Packaging / batch ($)</label><input id="rPackaging" type="number" min="0" step=".01" value="'+(recipe.packaging ?? "")+'"></div>'+
+    '<div><label>Actual selling price / individual item ($)</label><input id="rActualPrice" type="number" min="0" step=".01" placeholder="Optional" value="'+(recipe.actualPrice ?? (recipe.name === "Blueberry Mini Tart" ? 11 : ""))+'"></div>'+ 
     '<div><label>Desired profit margin (%)</label><input id="rMargin" type="number" min="0" max="99" step="1" value="'+Math.round((recipe.targetMargin ?? db.settings.targetMargin)*100)+'"></div></div>'+
     '<h3>Ingredients</h3><div id="rows">'+recipe.rows.map(rowHTML).join("")+'</div><button class="secondary" id="addRow">+ Add ingredient</button>'+
     '<div class="summary" id="liveSummary"></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">'+
@@ -270,7 +273,8 @@ function recipeModal(existing) {
     recipe.yieldUnit=$("#rYieldUnit").value; recipe.prepMin=numberOrNull("#rPrep"); recipe.cookMin=numberOrNull("#rCook");
     recipe.prepLabor=$("#rPrepLabor").checked; recipe.cookLabor=$("#rCookLabor").checked; recipe.packaging=numberOrNull("#rPackaging");
     recipe.targetMargin=Number($("#rMargin").value)/100;
-    recipe.rows=$("#rows .ingredient-row").map((el)=>({ingredient:el.querySelector(".ri").value,qty:el.querySelector(".rq").value===""?null:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value}));
+    recipe.actualPrice=$("#rActualPrice").value===""?null:Number($("#rActualPrice").value);
+    recipe.rows=$("#rows .ingredient-row").map((el,index)=>{const next={ingredient:el.querySelector(".ri").value,qty:el.querySelector(".rq").value===""?null:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value};const old=recipe.rows[index];if(old && old.ingredient===next.ingredient && old.qty===next.qty && old.unit===next.unit && old.costMode==="imported")return {...old};return next;});
     return recipe;
   }
 
@@ -278,14 +282,18 @@ function recipeModal(existing) {
     const c=calc(collect());
     $$("#rows .ingredient-row").forEach((el,index)=>{el.querySelector(".rc").textContent=money(rowCost(recipe.rows[index]));});
     $("#liveSummary").innerHTML =
-      '<div><span>Ingredients</span><strong>'+money(c.ingredients)+'</strong></div>'+
+      '<div><span>Batch yield</span><strong>'+ (recipe.yieldQty||1)+' '+recipe.yieldUnit+'</strong></div>'+ 
+      '<div><span>Ingredients / batch</span><strong>'+money(c.ingredients)+'</strong></div>'+
       '<div><span>Labor</span><strong>'+money(c.labor)+'</strong></div>'+
       '<div><span>Packaging</span><strong>'+money(c.packaging)+'</strong></div>'+
-      '<div><span>Total cost</span><strong>'+money(c.total)+'</strong></div>'+
+      '<div><span>Total batch production cost</span><strong>'+money(c.total)+'</strong></div>'+ 
+      '<div><span>Production cost / item</span><strong>'+money(c.unit)+'</strong></div>'+
       '<div><span>Sales needed</span><strong>'+money(c.sales)+'</strong></div>'+
       '<div><span>Total profit</span><strong>'+money(c.profit)+'</strong></div>'+
       '<div><span>Sell each for</span><strong>'+money(c.salesUnit)+'</strong></div>'+
-      '<div><span>Profit / item</span><strong>'+money(c.profitUnit)+'</strong></div>';
+      '<div><span>Suggested profit / item</span><strong>'+money(c.profitUnit)+'</strong></div>'+ 
+      '<div><span>Actual selling price / item</span><strong>'+(c.actualPrice==null?'Not set':money(c.actualPrice))+'</strong></div>'+ 
+      '<div><span>Actual profit / item</span><strong>'+(c.actualProfitUnit==null?'Not set':money(c.actualProfitUnit))+'</strong></div>'; 
   }
 
   $("#modalBody").oninput=live;
