@@ -183,7 +183,7 @@ function dashboard() {
 
 function recipeTable() {
   return '<table><thead><tr><th>Recipe</th><th>Yield</th><th>Batch</th><th>Per item</th></tr></thead><tbody>'+
-    db.recipes.map((recipe)=>{const c=calc(recipe);return '<tr><td><strong>'+recipe.name+'</strong><br><span class="muted">'+recipe.category+'</span></td><td>'+recipe.yieldQty+' '+recipe.yieldUnit+'</td><td>'+money(c.total)+'</td><td>'+money(c.unit)+'</td></tr>';}).join("")+
+    [...db.recipes].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{sensitivity:"base"})).map((recipe)=>{const c=calc(recipe);return '<tr><td><strong>'+recipe.name+'</strong><br><span class="muted">'+recipe.category+'</span></td><td>'+recipe.yieldQty+' '+recipe.yieldUnit+'</td><td>'+money(c.total)+'</td><td>'+money(c.unit)+'</td></tr>';}).join("")+
     '</tbody></table>';
 }
 
@@ -195,13 +195,13 @@ function ingredientsView() {
 }
 
 function recipesView() {
-  return '<div class="recipe-grid">'+db.recipes.map((recipe)=>{const c=calc(recipe);return '<div class="card recipe-card" data-id="'+recipe.id+'"><span class="pill">'+recipe.category+'</span><h3>'+recipe.name+'</h3><span class="muted">Makes '+recipe.yieldQty+' '+recipe.yieldUnit+'</span><div class="cost">'+money(c.unit)+'</div><span class="muted">cost per item</span></div>';}).join("")+'</div>';
+  return '<div class="recipe-grid">'+[...db.recipes].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{sensitivity:"base"})).map((recipe)=>{const c=calc(recipe);return '<div class="card recipe-card" data-id="'+recipe.id+'"><span class="pill">'+recipe.category+'</span><h3>'+recipe.name+'</h3><span class="muted">Makes '+recipe.yieldQty+' '+recipe.yieldUnit+'</span><div class="cost">'+money(c.unit)+'</div><span class="muted">cost per item</span></div>';}).join("")+'</div>';
 }
 
 function reportsView() {
   return '<div class="card"><div class="section-title"><h2>Recipe cost analysis</h2><span class="muted">Default margin '+Math.round(db.settings.targetMargin*100)+'%</span></div>'+
     '<table><thead><tr><th>Recipe</th><th>Ingredients</th><th>Labor</th><th>Packaging</th><th>Total cost</th><th>Sales needed</th><th>Profit</th></tr></thead><tbody>'+
-    db.recipes.map((recipe)=>{const c=calc(recipe);return '<tr><td><strong>'+recipe.name+'</strong></td><td>'+money(c.ingredients)+'</td><td>'+money(c.labor)+'</td><td>'+money(c.packaging)+'</td><td>'+money(c.total)+'</td><td>'+money(c.sales)+'</td><td>'+money(c.profit)+'</td></tr>';}).join("")+
+    [...db.recipes].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{sensitivity:"base"})).map((recipe)=>{const c=calc(recipe);return '<tr><td><strong>'+recipe.name+'</strong></td><td>'+money(c.ingredients)+'</td><td>'+money(c.labor)+'</td><td>'+money(c.packaging)+'</td><td>'+money(c.total)+'</td><td>'+money(c.sales)+'</td><td>'+money(c.profit)+'</td></tr>';}).join("")+
     '</tbody></table></div>';
 }
 
@@ -298,9 +298,9 @@ function recipeModal(existing) {
 
   $("#modalBody").oninput=live;
   $("#modalBody").onchange=live;
-  $("#addRow").onclick=()=>{$("#rows").insertAdjacentHTML("beforeend",rowHTML());live();};
+  $("#addRow").onclick=(event)=>{event.preventDefault();$("#rows").insertAdjacentHTML("beforeend",rowHTML());live();};
   $("#rows").onclick=(event)=>{if(event.target.classList.contains("removeRow")){event.target.closest(".ingredient-row").remove();live();}};
-  $("#saveRecipe").onclick=()=>{collect();const index=db.recipes.findIndex((item)=>item.id===recipe.id);if(index>=0)db.recipes[index]=recipe;else db.recipes.push(recipe);save();closeModal();render("recipes");};
+  $("#saveRecipe").onclick=(event)=>{event.preventDefault();try{collect();recipe.name=recipe.name.trim();if(!recipe.name){alert("Please enter a recipe name.");$("#rName").focus();return;}if(!(Number(recipe.yieldQty)>0)){alert("Please enter a batch yield greater than zero.");$("#rYield").focus();return;}const index=db.recipes.findIndex(item=>item.id===recipe.id);if(index>=0)db.recipes[index]=recipe;else db.recipes.push(recipe);save();closeModal();render("recipes");}catch(error){console.error("Recipe save failed",error);alert("Unable to save recipe: "+error.message);}};
   if(existing) $("#deleteRecipe").onclick=()=>{db.recipes=db.recipes.filter((item)=>item.id!==recipe.id);save();closeModal();render("recipes");};
   live();
 }
