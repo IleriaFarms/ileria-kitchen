@@ -274,7 +274,7 @@ function recipeModal(existing) {
     recipe.prepLabor=$("#rPrepLabor").checked; recipe.cookLabor=$("#rCookLabor").checked; recipe.packaging=numberOrNull("#rPackaging");
     recipe.targetMargin=Number($("#rMargin").value)/100;
     recipe.actualPrice=$("#rActualPrice").value===""?null:Number($("#rActualPrice").value);
-    recipe.rows=$("#rows .ingredient-row").map((el,index)=>{const next={ingredient:el.querySelector(".ri").value,qty:el.querySelector(".rq").value===""?null:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value};const old=recipe.rows[index];if(old && old.ingredient===next.ingredient && old.qty===next.qty && old.unit===next.unit && old.costMode==="imported")return {...old};return next;});
+    recipe.rows=Array.from(document.querySelectorAll("#rows .ingredient-row")).map(el,index)=>{const next={ingredient:el.querySelector(".ri").value,qty:el.querySelector(".rq").value===""?null:Number(el.querySelector(".rq").value),unit:el.querySelector(".ru").value};const old=recipe.rows[index];if(old && old.ingredient===next.ingredient && old.qty===next.qty && old.unit===next.unit && old.costMode==="imported")return {...old};return next;});
     return recipe;
   }
 
