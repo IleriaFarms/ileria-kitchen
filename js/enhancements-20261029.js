@@ -7,6 +7,7 @@ ingredientsView=function(){
  return html.replace('<th>Updated</th>','<th>Updated</th><th>Actions</th>').replace(/<\/tr>/g,'</tr>').replace('<tbody>'+db.ingredients.map((item)=>'<tr><td><strong>'+item.name+'</strong></td><td>'+item.supplier+'</td><td>'+money(item.costPerUnit)+' / '+item.unit+'</td><td>'+item.updated+'</td></tr>').join("")+'</tbody>',
  '<tbody>'+[...db.ingredients].sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:"base"})).map(item=>'<tr><td><strong>'+esc(item.name)+'</strong></td><td>'+esc(item.supplier)+'</td><td>'+money(item.costPerUnit)+' / '+esc(item.unit)+'</td><td>'+esc(item.updated)+'</td><td><button class="secondary ingredientEdit" data-id="'+esc(item.id)+'">Edit</button></td></tr>').join("")+'</tbody>');
 };
+views.ingredients=ingredientsView;
 const originalBind=bind;
 bind=function(view){originalBind(view);if(view==="ingredients")document.querySelectorAll(".ingredientEdit").forEach(b=>b.onclick=()=>editIngredient(b.dataset.id));};
 function editIngredient(id){
