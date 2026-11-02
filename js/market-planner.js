@@ -35,45 +35,46 @@ function exportPlan(p){const t=planTotals(p),market=p.market==="udc"?"UDC Lamond
  win.document.close();win.focus();setTimeout(()=>win.print(),350);
 }
 
-// Customer-facing menu: quantities and costs are intentionally excluded.
+// Customer-facing menu editor. Never modifies the underlying production plan.
+const MENU_KEY="ileriaMarketMenuPreferencesV1";
+const menuPrefs=()=>{try{return JSON.parse(localStorage.getItem(MENU_KEY))||{}}catch{return {}}};
+const excludedMenuItem=r=>/\\bcsa\\b|inventory|wholesale|bulk only|not for sale/i.test((r?.name||"")+" "+(r?.category||""));
+function menuDefaults(p){
+ const prefs=menuPrefs(),market=p.market||state.market,custom=prefs[market]||{};
+ const entries=new Map();
+ (p.rows||[]).forEach(row=>{
+  const r=recipe(row.recipe);if(!r)return;
+  const key=String(r.id),a=amounts(row),saved=custom[key]||{};
+  if(entries.has(key))return;
+  entries.set(key,{key,include:saved.include??!excludedMenuItem(r),name:saved.name??r.name,price:saved.price??a.price,unit:saved.unit??"",category:saved.category??(r.category||"Market Favorites")});
+ });
+ (custom.extras||[]).forEach(x=>entries.set(x.key,{...x}));
+ return [...entries.values()];
+}
 function exportCustomerMenu(p){
- const items=(p.rows||[]).map(row=>{
-   const r=recipe(row.recipe);
-   if(!r||/\\bcsa\\b/i.test(r.name||"")||/\\bcsa\\b/i.test(r.category||""))return null;
-   const a=amounts(row);
-   return {name:r.name,price:a.price,category:String(r.category||"Market Favorites")};
- }).filter(Boolean);
- if(!items.length){alert("Add non-CSA products to the plan before exporting a market menu.");return;}
- const unique=new Map();
- items.forEach(item=>unique.set(item.name.toLocaleLowerCase(),item));
- const grouped=new Map();
- [...unique.values()].forEach(item=>{if(!grouped.has(item.category))grouped.set(item.category,[]);grouped.get(item.category).push(item)});
- const sections=[...grouped].map(([category,entries])=>'<section class="category"><h2>'+esc(category)+'</h2>'+entries.map(item=>'<div class="menu-item"><span>'+esc(item.name)+'</span><strong>'+money(item.price)+'</strong></div>').join('')+'</section>').join('');
- const win=window.open("","_blank");
- if(!win){alert("Please allow pop-ups to export the market menu.");return;}
- const style=`<style>
- @page{size:letter;margin:0}
- *{box-sizing:border-box}
- body{margin:0;background:#f7f2e7;color:#26352b;font-family:Georgia,'Times New Roman',serif}
- .page{width:8.5in;min-height:11in;margin:auto;padding:.65in .72in .6in;background:#fffdf8;position:relative;border:13px solid #355f45}
- .top{text-align:center;border-bottom:1px solid #b9c8b4;padding-bottom:25px}
- .brand-logo{display:block;width:110px;height:110px;object-fit:contain;margin:0 auto 6px}
- .eyebrow{font:700 11px Arial,sans-serif;letter-spacing:4px;color:#a65f45;text-transform:uppercase}
- h1{font-size:42px;font-weight:normal;letter-spacing:2px;color:#355f45;margin:12px 0 7px}
- .sub{font:12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#718076}
- .columns{columns:2;column-gap:35px;margin-top:30px}
- .category{break-inside:avoid;margin:0 0 28px}
- h2{font-size:19px;font-weight:normal;color:#355f45;border-bottom:1px solid #dfe8d8;padding-bottom:8px;margin:0 0 13px}
- .menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px;font-size:15px;line-height:1.35;break-inside:avoid}
- .menu-item span{flex:1}.menu-item strong{white-space:nowrap;font:700 14px Arial,sans-serif;color:#355f45}
- .footer{text-align:center;border-top:1px solid #b9c8b4;padding-top:18px;margin-top:25px;color:#718076;font:11px Arial,sans-serif;letter-spacing:1px}
- .toolbar{position:sticky;top:0;background:#26352b;color:white;padding:12px;text-align:center;font:14px Arial,sans-serif;z-index:5}
- .toolbar button{border:0;border-radius:5px;background:#dfe8d8;color:#26352b;padding:10px 20px;cursor:pointer;font-weight:bold}
- @media print{.toolbar{display:none}.page{margin:0;min-height:11in;box-shadow:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
- @media screen{.page{box-shadow:0 10px 35px #0002;margin:20px auto}}
- </style>`;
- win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Ileria Farms — Market Day Menu</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms leaf logo"><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">Market Day Menu</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>');
- win.document.close();win.focus();
+ const market=p.market||state.market,items=menuDefaults(p);
+ const overlay=document.createElement("div");overlay.id="mpMenuOverlay";
+ overlay.style.cssText="position:fixed;inset:0;background:#17251dc9;z-index:9999;overflow:auto;padding:24px;display:flex;justify-content:center;align-items:flex-start";
+ overlay.innerHTML='<div style="background:#fffdf8;border-radius:18px;padding:24px;width:min(950px,100%);box-shadow:0 15px 50px #0004"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h2 style="margin:0;color:#355f45">Customize Market Day Menu</h2><p class="muted">Review names, prices and serving units. CSA and inventory entries are excluded by default.</p></div><button class="secondary" id="mmClose">Close</button></div><div style="overflow-x:auto"><table style="min-width:670px"><thead><tr><th>Include</th><th>Customer-facing item name</th><th>Price ($)</th><th>Serving unit</th><th>Category</th><th></th></tr></thead><tbody id="mmRows"></tbody></table></div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><button class="secondary" id="mmAdd">+ Add custom item</button><button class="secondary" id="mmRemember">Save menu preferences</button><button class="primary" id="mmExport">Preview / Print Menu</button></div><p class="muted" style="margin-top:12px">Changes here affect the customer menu only. They do not alter recipes, costs, or market plan quantities.</p></div>';
+ document.body.appendChild(overlay);
+ const body=overlay.querySelector("#mmRows");
+ const rowHtml=x=>'<tr data-key="'+esc(x.key)+'"><td><input class="mmInclude" aria-label="Include item" type="checkbox" '+(x.include?'checked':'')+'></td><td><input class="mmName" value="'+esc(x.name)+'" aria-label="Menu name"></td><td><input class="mmPrice" type="number" min="0" step=".01" value="'+num(x.price)+'" aria-label="Menu price"></td><td><input class="mmUnit" placeholder="e.g. cup" value="'+esc(x.unit||'')+'" aria-label="Serving unit"></td><td><input class="mmCategory" value="'+esc(x.category||'Market Favorites')+'" aria-label="Category"></td><td><button class="secondary mmRemove" type="button" '+(x.key.startsWith("custom-")?'':'disabled title="Uncheck to hide planned items"')+'>Remove</button></td></tr>';
+ const draw=()=>{body.innerHTML=items.map(rowHtml).join("");body.querySelectorAll(".mmRemove").forEach(b=>b.onclick=()=>{const key=b.closest("tr").dataset.key;const i=items.findIndex(x=>x.key===key);if(i>=0){items.splice(i,1);draw()}})};
+ const collect=()=>{body.querySelectorAll("tr").forEach(tr=>{const x=items.find(i=>i.key===tr.dataset.key);if(!x)return;x.include=tr.querySelector(".mmInclude").checked;x.name=tr.querySelector(".mmName").value.trim();x.price=num(tr.querySelector(".mmPrice").value);x.unit=tr.querySelector(".mmUnit").value.trim();x.category=tr.querySelector(".mmCategory").value.trim()||"Market Favorites"})};
+ const remember=()=>{collect();const prefs=menuPrefs(),current={extras:items.filter(x=>x.key.startsWith("custom-"))};items.filter(x=>!x.key.startsWith("custom-")).forEach(x=>current[x.key]={include:x.include,name:x.name,price:x.price,unit:x.unit,category:x.category});prefs[market]=current;localStorage.setItem(MENU_KEY,JSON.stringify(prefs))};
+ overlay.querySelector("#mmClose").onclick=()=>overlay.remove();
+ overlay.querySelector("#mmAdd").onclick=()=>{collect();items.push({key:"custom-"+crypto.randomUUID(),include:true,name:"New menu item",price:0,unit:"",category:"Market Favorites"});draw()};
+ overlay.querySelector("#mmRemember").onclick=()=>{remember();alert("Menu preferences saved for this market.")};
+ overlay.querySelector("#mmExport").onclick=()=>{
+  remember();
+  const chosen=items.filter(x=>x.include&&x.name.trim());if(!chosen.length){alert("Please include at least one menu item.");return}
+  const groups=new Map();chosen.forEach(x=>{const cat=x.category||"Market Favorites";if(!groups.has(cat))groups.set(cat,[]);groups.get(cat).push(x)});
+  const sections=[...groups].map(([category,entries])=>'<section class="category"><h2>'+esc(category)+'</h2>'+entries.map(x=>'<div class="menu-item"><span>'+esc(x.name)+(x.unit?' <small> / '+esc(x.unit)+'</small>':'')+'</span><strong>'+money(x.price)+'</strong></div>').join('')+'</section>').join('');
+  const win=window.open("","_blank");if(!win){alert("Please allow pop-ups to open the printable menu.");return}
+  const style=`<style>@page{size:letter;margin:0}*{box-sizing:border-box}body{margin:0;background:#f7f2e7;color:#26352b;font-family:Georgia,serif}.page{width:8.5in;min-height:11in;margin:auto;padding:.65in .72in .6in;background:#fffdf8;border:13px solid #355f45}.top{text-align:center;border-bottom:1px solid #b9c8b4;padding-bottom:25px}.brand-logo{width:110px;height:110px;object-fit:contain;display:block;margin:0 auto 6px}.eyebrow{font:700 11px Arial,sans-serif;letter-spacing:4px;color:#a65f45;text-transform:uppercase}h1{font-size:42px;font-weight:normal;letter-spacing:2px;color:#355f45;margin:12px 0 7px}.sub{font:12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#718076}.columns{columns:2;column-gap:35px;margin-top:30px}.category{break-inside:avoid;margin:0 0 28px}h2{font-size:19px;font-weight:normal;color:#355f45;border-bottom:1px solid #dfe8d8;padding-bottom:8px;margin:0 0 13px}.menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px;font-size:15px;line-height:1.35;break-inside:avoid}.menu-item span{flex:1}.menu-item small{font:12px Arial,sans-serif;color:#718076}.menu-item strong{white-space:nowrap;font:700 14px Arial,sans-serif;color:#355f45}.footer{text-align:center;border-top:1px solid #b9c8b4;padding-top:18px;margin-top:25px;color:#718076;font:11px Arial,sans-serif;letter-spacing:1px}.toolbar{position:sticky;top:0;background:#26352b;padding:12px;text-align:center}.toolbar button{border:0;border-radius:5px;background:#dfe8d8;color:#26352b;padding:10px 20px;cursor:pointer;font-weight:bold}@media print{.toolbar{display:none}.page{margin:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}}@media screen{.page{box-shadow:0 10px 35px #0002;margin:20px auto}}</style>`;
+  win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Ileria Farms Market Menu</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms logo"><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">Market Day Menu</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>');win.document.close();win.focus();
+ };
+ draw();
 }
 
 function renderMarket(){
