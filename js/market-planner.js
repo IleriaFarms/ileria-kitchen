@@ -77,10 +77,9 @@ function exportCustomerMenu(p){
   const html='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(menuTitle)+' | Ileria Farms</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms logo"><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">'+esc(menuTitle)+'</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>';
   // Download a standalone document instead of opening an ephemeral Safari
   // popup/blob tab. The downloaded file stays available indefinitely.
-  const printableHtml=html.replace(
-   '<img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms logo">',
-   '<div class="brand-logo" style="width:auto;height:auto;font-size:28px;color:#355f45;font-family:Georgia,serif;margin-bottom:12px">✦</div>'
-  );
+  // Preserve the farm logo in the downloaded menu. The logo is served from
+  // GitHub Pages; the HTML itself remains a normal downloadable file.
+  const printableHtml=html;
   const blob=new Blob([printableHtml],{type:"text/html;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
@@ -94,7 +93,7 @@ function exportCustomerMenu(p){
   const note=overlay.querySelector("#mmDownloadHelp")||document.createElement("p");
   note.id="mmDownloadHelp";
   note.style.cssText="margin-top:12px;color:#355f45;font-weight:bold";
-  note.textContent="Menu downloaded! Open the HTML file from Downloads in Safari, then click Print / Save as PDF. The file works offline.";
+  note.textContent="Menu downloaded! Open the HTML file from Downloads in Safari, then click Print / Save as PDF. The menu file can be saved locally; the logo loads when connected to the internet.";
   overlay.querySelector("#mmExport").parentElement.after(note);
  };
  draw();
