@@ -57,7 +57,7 @@ function exportCustomerMenu(p){
  body{margin:0;background:#f7f2e7;color:#26352b;font-family:Georgia,'Times New Roman',serif}
  .page{width:8.5in;min-height:11in;margin:auto;padding:.65in .72in .6in;background:#fffdf8;position:relative;border:13px solid #355f45}
  .top{text-align:center;border-bottom:1px solid #b9c8b4;padding-bottom:25px}
- .seal{width:65px;height:65px;border:2px solid #355f45;border-radius:50%;display:grid;place-items:center;margin:0 auto 15px;color:#355f45;font-size:25px;letter-spacing:-2px}
+ .brand-logo{display:block;width:110px;height:110px;object-fit:contain;margin:0 auto 6px}
  .eyebrow{font:700 11px Arial,sans-serif;letter-spacing:4px;color:#a65f45;text-transform:uppercase}
  h1{font-size:42px;font-weight:normal;letter-spacing:2px;color:#355f45;margin:12px 0 7px}
  .sub{font:12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#718076}
@@ -72,7 +72,7 @@ function exportCustomerMenu(p){
  @media print{.toolbar{display:none}.page{margin:0;min-height:11in;box-shadow:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
  @media screen{.page{box-shadow:0 10px 35px #0002;margin:20px auto}}
  </style>`;
- win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Ileria Farms — Market Day Menu</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><div class="seal">IF</div><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">Market Day Menu</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>');
+ win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Ileria Farms — Market Day Menu</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms leaf logo"><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">Market Day Menu</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>');
  win.document.close();win.focus();
 }
 
