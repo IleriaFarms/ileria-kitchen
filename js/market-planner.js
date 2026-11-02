@@ -56,7 +56,7 @@ function exportCustomerMenu(p){
  const savedTitle=(menuPrefs()[market]||{}).title||"Market Day Menu";
  const overlay=document.createElement("div");overlay.id="mpMenuOverlay";
  overlay.style.cssText="position:fixed;inset:0;background:#17251dc9;z-index:9999;overflow:auto;padding:24px;display:flex;justify-content:center;align-items:flex-start";
- overlay.innerHTML='<div style="background:#fffdf8;border-radius:18px;padding:24px;width:min(950px,100%);box-shadow:0 15px 50px #0004"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h2 style="margin:0;color:#355f45">Customize Market Day Menu</h2><p class="muted">Review names, prices and serving units. CSA and inventory entries are excluded by default.</p></div><button class="secondary" id="mmClose">Close</button></div><div style="margin:16px 0"><label for="mmTitle" style="display:block;margin-bottom:6px;font-weight:bold">Menu title</label><input id="mmTitle" type="text" maxlength="120" style="width:100%;padding:10px" value="'+esc(savedTitle)+'" placeholder="e.g. Wholesale Price List"></div><div style="overflow-x:auto"><table style="min-width:670px"><thead><tr><th>Include</th><th>Customer-facing item name</th><th>Price ($)</th><th>Serving unit</th><th>Category</th><th></th></tr></thead><tbody id="mmRows"></tbody></table></div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><button class="secondary" id="mmAdd">+ Add custom item</button><button class="secondary" id="mmRemember">Save menu preferences</button><button class="primary" id="mmExport">Preview / Print Menu</button></div><p class="muted" style="margin-top:12px">Changes here affect the customer menu only. They do not alter recipes, costs, or market plan quantities.</p></div>';
+ overlay.innerHTML='<div style="background:#fffdf8;border-radius:18px;padding:24px;width:min(950px,100%);box-shadow:0 15px 50px #0004"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><h2 style="margin:0;color:#355f45">Customize Market Day Menu</h2><p class="muted">Review names, prices and serving units. CSA and inventory entries are excluded by default.</p></div><button class="secondary" id="mmClose">Close</button></div><div style="margin:16px 0"><label for="mmTitle" style="display:block;margin-bottom:6px;font-weight:bold">Menu title</label><input id="mmTitle" type="text" maxlength="120" style="width:100%;padding:10px" value="'+esc(savedTitle)+'" placeholder="e.g. Wholesale Price List"></div><div style="overflow-x:auto"><table style="min-width:670px"><thead><tr><th>Include</th><th>Customer-facing item name</th><th>Price ($)</th><th>Serving unit</th><th>Category</th><th></th></tr></thead><tbody id="mmRows"></tbody></table></div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><button class="secondary" id="mmAdd">+ Add custom item</button><button class="secondary" id="mmRemember">Save menu preferences</button><button class="primary" id="mmExport">Download Printable Menu</button></div><p class="muted" style="margin-top:12px">Changes here affect the customer menu only. They do not alter recipes, costs, or market plan quantities.</p></div>';
  document.body.appendChild(overlay);
  const body=overlay.querySelector("#mmRows");
  const rowHtml=x=>'<tr data-key="'+esc(x.key)+'"><td><input class="mmInclude" aria-label="Include item" type="checkbox" '+(x.include?'checked':'')+'></td><td><input class="mmName" value="'+esc(x.name)+'" aria-label="Menu name"></td><td><input class="mmPrice" type="number" min="0" step=".01" value="'+num(x.price)+'" aria-label="Menu price"></td><td><input class="mmUnit" placeholder="e.g. cup" value="'+esc(x.unit||'')+'" aria-label="Serving unit"></td><td><input class="mmCategory" value="'+esc(x.category||'Market Favorites')+'" aria-label="Category"></td><td><button class="secondary mmRemove" type="button" '+(x.key.startsWith("custom-")?'':'disabled title="Uncheck to hide planned items"')+'>Remove</button></td></tr>';
@@ -75,20 +75,27 @@ function exportCustomerMenu(p){
   // Build a standalone document rather than writing into an about:blank popup (Safari may blank it).
   const style=`<style>@page{size:letter;margin:0}*{box-sizing:border-box}body{margin:0;background:#f7f2e7;color:#26352b;font-family:Georgia,serif}.page{width:8.5in;min-height:11in;margin:auto;padding:.65in .72in .6in;background:#fffdf8;border:13px solid #355f45}.top{text-align:center;border-bottom:1px solid #b9c8b4;padding-bottom:25px}.brand-logo{width:110px;height:110px;object-fit:contain;display:block;margin:0 auto 6px}.eyebrow{font:700 11px Arial,sans-serif;letter-spacing:4px;color:#a65f45;text-transform:uppercase}h1{font-size:42px;font-weight:normal;letter-spacing:2px;color:#355f45;margin:12px 0 7px}.sub{font:12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#718076}.columns{columns:2;column-gap:35px;margin-top:30px}.category{break-inside:avoid;margin:0 0 28px}h2{font-size:19px;font-weight:normal;color:#355f45;border-bottom:1px solid #dfe8d8;padding-bottom:8px;margin:0 0 13px}.menu-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px;font-size:15px;line-height:1.35;break-inside:avoid}.menu-item span{flex:1}.menu-item small{font:12px Arial,sans-serif;color:#718076}.menu-item strong{white-space:nowrap;font:700 14px Arial,sans-serif;color:#355f45}.footer{text-align:center;border-top:1px solid #b9c8b4;padding-top:18px;margin-top:25px;color:#718076;font:11px Arial,sans-serif;letter-spacing:1px}.toolbar{position:sticky;top:0;background:#26352b;padding:12px;text-align:center}.toolbar button{border:0;border-radius:5px;background:#dfe8d8;color:#26352b;padding:10px 20px;cursor:pointer;font-weight:bold}@media print{.toolbar{display:none}.page{margin:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}}@media screen{.page{box-shadow:0 10px 35px #0002;margin:20px auto}}</style>`;
   const html='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(menuTitle)+' | Ileria Farms</title>'+style+'</head><body><div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div><main class="page"><header class="top"><img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms logo"><div class="eyebrow">Fresh from our farm & kitchen</div><h1>Ileria Farms</h1><div class="sub">'+esc(menuTitle)+'</div></header><div class="columns">'+sections+'</div><footer class="footer">Grown with care · Made with love · ileriafarms.com</footer></main></body></html>';
-  // Write directly to a stable popup instead of navigating Safari to a blob URL.
-  const win=window.open("","_blank");
-  if(win){
-   try{win.document.open();win.document.write(html);win.document.close();win.focus();}
-   catch(err){try{win.close()}catch(e){}downloadMenu();}
-  }else downloadMenu();
-  function downloadMenu(){
-   const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-   const url=URL.createObjectURL(blob),a=document.createElement("a");
-   a.href=url;a.download="Ileria-Farms-"+menuTitle.replace(/[^a-z0-9_-]+/gi,"-")+".html";
-   document.body.appendChild(a);a.click();a.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),60000);
-   alert("Preview was blocked. Open the downloaded HTML menu and choose Print / Save as PDF.");
-  }
+  // Download a standalone document instead of opening an ephemeral Safari
+  // popup/blob tab. The downloaded file stays available indefinitely.
+  const printableHtml=html.replace(
+   '<img class="brand-logo" src="https://ileriafarms.github.io/ileria-kitchen/assets/ileria-leaf.svg" alt="Ileria Farms logo">',
+   '<div class="brand-logo" style="width:auto;height:auto;font-size:28px;color:#355f45;font-family:Georgia,serif;margin-bottom:12px">✦</div>'
+  );
+  const blob=new Blob([printableHtml],{type:"text/html;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="Ileria-Farms-"+menuTitle.replace(/[^a-z0-9_-]+/gi,"-")+".html";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // URL is not used for a preview; delay cleanup to accommodate Safari downloads.
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+  const note=overlay.querySelector("#mmDownloadHelp")||document.createElement("p");
+  note.id="mmDownloadHelp";
+  note.style.cssText="margin-top:12px;color:#355f45;font-weight:bold";
+  note.textContent="Menu downloaded! Open the HTML file from Downloads in Safari, then click Print / Save as PDF. The file works offline.";
+  overlay.querySelector("#mmExport").parentElement.after(note);
  };
  draw();
 }
